@@ -76,7 +76,13 @@ DOUBLE_ALL    = MAP(MULTIPLY(TWO))
 
 // Natural numbers with lists
 
-TEN       = SUCC(MULTIPLY(THREE)(THREE))
+FOUR      = SUCC(THREE)
+FIVE      = SUCC(FOUR)
+SIX       = MULTIPLY(THREE)(TWO)
+SEVEN     = SUCC(SIX)
+EIGHT     = POWER(TWO)(THREE)
+NINE      = MULTIPLY(THREE)(THREE)
+TEN       = SUCC(NINE)
 RADIX     = (x => TEN(x))  // TEN -- avoid identity
 TO_DIGITS = Z( f => ( n => PUSH(MOD(n)(RADIX))(IF(IS_LESS_OR_EQUAL(n)(PRED(RADIX)))(NIL)( v => f(DIV(n)(RADIX))(v) ) ) ) )
 TO_CHAR   =( n => n ) // assume string encoding where 0 encodes '0', 1 encodes '1' etc
@@ -84,8 +90,6 @@ TO_STRING =( n => MAP(TO_CHAR)(TO_DIGITS(n)) )
 
 // FizzBuzz
 
-FOUR    = SUCC(THREE)
-FIVE    = SUCC(FOUR)
 FIFTEEN = MULTIPLY(THREE)(FIVE)
 HUNDRED = MULTIPLY(TEN)(TEN)
 FIZZ    = MAP(ADD(RADIX))(CONS(ONE)(CONS(TWO)(CONS(FOUR)(CONS(FOUR)(NIL)))))
@@ -209,21 +213,17 @@ _TO_STRING = (s => _TO_ARRAY(s).map(_TO_CHAR).join(""))
 
 _FROM_INTEGER_BUILD_ADD = n => {
   _gen_plain_num = n => `( f => ( x => ${"f(".repeat(n)}x${")".repeat(n)} ) )`;
-  if (n < 0) return "(ZERO)";
-  if (n <= 5) return "("+["ZERO", "ONE", "TWO", "THREE", "FOUR", "FIVE"][n]+")";
+  if (n <= 10) return "("+["ZERO", "ONE", "TWO", "THREE", "FOUR", "FIVE", "SIX", "SEVEN", "EIGHT", "NINE", "TEN"][n < 0 ? 0 : n]+")";
   let n1 = Math.floor(n/2);
   let n2 = n - n1;
   if (n2 == 1) return `(SUCC${_FROM_INTEGER_BUILD_ADD(n1)})`;
   if (n2 == 2) return `(SUCC(SUCC${_FROM_INTEGER_BUILD_ADD(n1)}))`;
+  if (n1 == n2) return `(MULTIPLY${_FROM_INTEGER_BUILD(n1)}(TWO))`;
   return `(ADD${_FROM_INTEGER_BUILD(n1)}${_FROM_INTEGER_BUILD(n2)})`;
 };
-_FROM_INTEGER_BUILD_ADD1 = n => {
-  _gen_plain_num = n => `( f => ( x => ${"f(".repeat(n)}x${")".repeat(n)} ) )`;
-  if (n <= 0) return "(ZERO)";
-  if (n <= 5) return _gen_plain_num(n);
-  let n1 = Math.floor(n/2);
-  let n2 = n - n1;
-  return `(ADD${_FROM_INTEGER_BUILD(n1)}${_FROM_INTEGER_BUILD(n2)})`;
+_INTEGER_BUILD_INC_BY = (n, inc) => {
+  if (inc <= 4) return `${"(SUCC".repeat(inc)}${n}${")".repeat(inc)}`;
+  return `(ADD${n}${_FROM_INTEGER_BUILD(inc)})`;
 };
 _FROM_INTEGER_BUILD_MUL = n => {
   let sqrt = Math.floor(Math.sqrt(n));
@@ -233,7 +233,8 @@ _FROM_INTEGER_BUILD_MUL = n => {
     map(([a1, a2]) => [a1, a2, a1 * a2]).
     filter(([,,nn]) => nn <= n).
     reduce((a1, a2) => a1[2] > a2[2] ? a1 : a2);
-  return `(ADD(MULTIPLY${_FROM_INTEGER_BUILD(arg1)}${_FROM_INTEGER_BUILD(arg2)})${_FROM_INTEGER_BUILD(n - n_next)})`;
+  if (arg1 == arg2) return _INTEGER_BUILD_INC_BY(`(POWER${_FROM_INTEGER_BUILD(arg1)}(TWO))`, n - n_next);
+  return _INTEGER_BUILD_INC_BY(`(MULTIPLY${_FROM_INTEGER_BUILD(arg1)}${_FROM_INTEGER_BUILD(arg2)})`, n - n_next);
 };
 _FROM_INTEGER_BUILD_POW = n => {
   let powdiff = (n, pow) => {
@@ -245,9 +246,7 @@ _FROM_INTEGER_BUILD_POW = n => {
     map(pow => powdiff(n, pow)).
     filter(a => a[0] >= 0 && a[1] > 1).
     reduce((a1, a2) => Math.max(...a1) < Math.max(...a2) ? a1 : a2);
-  return !diff ?
-    `(POWER${_FROM_INTEGER_BUILD(root)}${_FROM_INTEGER_BUILD(pow)})` :
-    `(ADD(POWER${_FROM_INTEGER_BUILD(root)}${_FROM_INTEGER_BUILD(pow)})(${_FROM_INTEGER_BUILD(diff)}))`;
+  return _INTEGER_BUILD_INC_BY(`(POWER${_FROM_INTEGER_BUILD(root)}${_FROM_INTEGER_BUILD(pow)})`, diff);
 };
 _FROM_INTEGER_BUILD = n => {
   if (n <= 50) return _FROM_INTEGER_BUILD_ADD(n);
