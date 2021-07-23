@@ -215,7 +215,7 @@ _FROM_INTEGER_BUILD_ADD = n => {
   let n2 = n - n1;
   if (n2 == 1) return `(SUCC${_FROM_INTEGER_BUILD_ADD(n1)})`;
   if (n2 == 2) return `(SUCC(SUCC${_FROM_INTEGER_BUILD_ADD(n1)}))`;
-  return `(ADD${_FROM_INTEGER_BUILD_ADD(n1)}${_FROM_INTEGER_BUILD_ADD(n2)})`;
+  return `(ADD${_FROM_INTEGER_BUILD(n1)}${_FROM_INTEGER_BUILD(n2)})`;
 };
 _FROM_INTEGER_BUILD_ADD1 = n => {
   _gen_plain_num = n => `( f => ( x => ${"f(".repeat(n)}x${")".repeat(n)} ) )`;
@@ -223,7 +223,7 @@ _FROM_INTEGER_BUILD_ADD1 = n => {
   if (n <= 5) return _gen_plain_num(n);
   let n1 = Math.floor(n/2);
   let n2 = n - n1;
-  return `(ADD${_FROM_INTEGER_BUILD_ADD(n1)}${_FROM_INTEGER_BUILD_ADD(n2)})`;
+  return `(ADD${_FROM_INTEGER_BUILD(n1)}${_FROM_INTEGER_BUILD(n2)})`;
 };
 _FROM_INTEGER_BUILD_MUL = n => {
   let sqrt = Math.floor(Math.sqrt(n));
@@ -233,10 +233,21 @@ _FROM_INTEGER_BUILD_MUL = n => {
     map(([a1, a2]) => [a1, a2, a1 * a2]).
     filter(([,,nn]) => nn <= n).
     reduce((a1, a2) => a1[2] > a2[2] ? a1 : a2);
-  return `(ADD(MULTIPLY${_FROM_INTEGER_BUILD_ADD(arg1)}${_FROM_INTEGER_BUILD_ADD(arg2)})${_FROM_INTEGER_BUILD(n - n_next)})`;
+  return `(ADD(MULTIPLY${_FROM_INTEGER_BUILD(arg1)}${_FROM_INTEGER_BUILD(arg2)})${_FROM_INTEGER_BUILD(n - n_next)})`;
 };
 _FROM_INTEGER_BUILD_POW = n => {
-  return `[pow]`;
+  let powdiff = (n, pow) => {
+    let root = Math.floor(Math.round(n**(1/pow) * 100)/100);
+    return [n - root**pow, root, pow];
+  };
+  let [diff, root, pow] =
+    [2,3,4,5,6,7,8,9,10].
+    map(pow => powdiff(n, pow)).
+    filter(a => a[0] >= 0 && a[1] > 1).
+    reduce((a1, a2) => Math.max(...a1) < Math.max(...a2) ? a1 : a2);
+  return !diff ?
+    `(POWER${_FROM_INTEGER_BUILD(root)}${_FROM_INTEGER_BUILD(pow)})` :
+    `(ADD(POWER${_FROM_INTEGER_BUILD(root)}${_FROM_INTEGER_BUILD(pow)})(${_FROM_INTEGER_BUILD(diff)}))`;
 };
 _FROM_INTEGER_BUILD = n => {
   if (n <= 50) return _FROM_INTEGER_BUILD_ADD(n);
@@ -294,6 +305,8 @@ _TEST_NUM(32);
 _TEST_NUM(100);
 _TEST_NUM(150);
 _TEST_NUM(999);
+_TEST_NUM(100000);
+_TEST_NUM(12345678);
 
 _TEST = (x, f) => {
   console.log(`
