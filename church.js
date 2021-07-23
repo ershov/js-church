@@ -248,11 +248,38 @@ _FROM_INTEGER_BUILD_POW = n => {
     reduce((a1, a2) => Math.max(...a1) < Math.max(...a2) ? a1 : a2);
   return _INTEGER_BUILD_INC_BY(`(POWER${_FROM_INTEGER_BUILD(root)}${_FROM_INTEGER_BUILD(pow)})`, diff);
 };
-_FROM_INTEGER_BUILD = n => {
-  if (n <= 50) return _FROM_INTEGER_BUILD_ADD(n);
-  if (n <= 1000) return _FROM_INTEGER_BUILD_MUL(n);
+_FROM_INTEGER_BUILD = n => {  // Simple version
+  if (n <= 20) return _FROM_INTEGER_BUILD_ADD(n);
+  if (n < 100) return _FROM_INTEGER_BUILD_MUL(n);
   return _FROM_INTEGER_BUILD_POW(n);
 };
+fill = (sz, val) => [...Array(sz)].fill(val);
+seq = (from, to) => [...new Array(to - from + 1)].map((x,i) => i + from);
+_FROM_INTEGER_BUILD = (()=>{  // A more efficient version
+  const LIMIT = 1000;
+  let op_tab = [["ZERO"], ["ONE"], ["TWO"], ["THREE"], ["FOUR"], ["FIVE"], ["SIX"], ["SEVEN"], ["EIGHT"], ["NINE"], ["TEN"]];
+  for (let i of seq(2, 10))
+    for (let j of seq(2, 10))
+      if (i**j < LIMIT)
+        op_tab[i**j] || (op_tab[i**j] = ["POWER", i, j]);
+      else
+        break;
+  for (let lim of seq(2, Math.ceil(LIMIT**0.5)))
+    for (let i = lim, j = 2; i >= 2; i--,j++)
+      if (i*j < LIMIT)
+        (!op_tab[i*j] && !(op_tab[i*j-1] && op_tab[i*j-1][0] == "POWER")) && (op_tab[i*j] = ["MULTIPLY", i, j]);
+      else
+        break;
+  //console.log(op_tab);
+  return num => {
+    if (num >= LIMIT) return _FROM_INTEGER_BUILD_POW(num);
+    let n;
+    for (n = num; !op_tab[n]; n--) { }
+    return _INTEGER_BUILD_INC_BY(
+        "(" + op_tab[n][0] + op_tab[n].slice(1).map(_FROM_INTEGER_BUILD).join("") + ")",
+      num - n);
+  };
+})();
 _FROM_INTEGER = n => eval("x => "+_FROM_INTEGER_BUILD(n)+"(x)");
 
 function EnsureOuterParens(str) {
@@ -301,8 +328,15 @@ ncode: ${_GENERATE_CODE(()=>_TO_INTEGER(NUM))}`);
 _TEST_NUM(5);
 _TEST_NUM(10);
 _TEST_NUM(32);
+_TEST_NUM(48);
+_TEST_NUM(65);
+_TEST_NUM(97);
 _TEST_NUM(100);
 _TEST_NUM(150);
+_TEST_NUM(160);
+_TEST_NUM(222);
+_TEST_NUM(300);
+_TEST_NUM(345);
 _TEST_NUM(999);
 _TEST_NUM(100000);
 _TEST_NUM(12345678);
