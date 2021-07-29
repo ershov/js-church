@@ -282,6 +282,9 @@ _FROM_INTEGER_BUILD = (()=>{  // A more efficient version
 })();
 _FROM_INTEGER = n => eval("x => "+_FROM_INTEGER_BUILD(n)+"(x)");
 
+_FROM_LIST_BUILD = l => l.map(n => "(CONS"+_FROM_INTEGER_BUILD(n)).join("") + "(NIL)" + (")".repeat(l.length));
+_FROM_LIST = l => eval("x => "+_FROM_LIST_BUILD(l)+"(x)");
+
 function EnsureOuterParens(str) {
   // Are there parens outside?
   if (!str.match(/^\s*\(/) || !str.match(/\)\s*$/)) return `(${str})`;
@@ -347,6 +350,35 @@ ${x} -> ${f()}
 ${f}
 ${_GENERATE_CODE(f)}`);
 }
+
+_TEST_LIST = l => {
+  LIST = _FROM_LIST(l);
+  console.log(`
+LIST: ${l}
+SOURCE: ${_FROM_LIST_BUILD(l)}
+LIST: ${LIST}
+list: ${_TO_ARRAY(LIST).map(_TO_INTEGER)}
+code: ${_GENERATE_CODE(LIST)}
+ncode: ${_GENERATE_CODE(()=>_TO_ARRAY(LIST).map(_TO_INTEGER))}`);
+}
+
+_TEST_LIST([100,200,300]);
+
+_TEST_STRING = s => {
+  let l = s.split("").map(c => c.charCodeAt(0));
+  LIST = _FROM_LIST(l);
+  console.log(`
+STRING: ${s}
+LIST: ${l}
+SOURCE: ${_FROM_LIST_BUILD(l)}
+LIST: ${LIST}
+list: ${_TO_ARRAY(LIST).map(_TO_INTEGER)}
+string: ${_TO_ARRAY(LIST).map(_TO_INTEGER).map(c => String.fromCharCode(c)).join("")}
+code: ${_GENERATE_CODE(LIST)}
+ncode: ${_GENERATE_CODE(()=>_TO_ARRAY(LIST).map(_TO_INTEGER).map(c => String.fromCharCode(c)).join(""))}`);
+}
+
+_TEST_STRING("qwe");
 
 console.log();
 console.log(`TEN: ${FuncSource(TEN)}`);
